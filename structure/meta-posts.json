@@ -1,0 +1,28 @@
+{
+    "title": "YMYL & Author Boxes",
+    "name": "ymyl-author-boxes",
+    "description": "",
+    "structure": [
+        {
+            "name": "",
+            "title": "",
+            "fields": [
+                {
+                    "type": "checkbox",
+                    "name": "ymyl-show",
+                    "title": "YMYL Box",
+                    "options": [
+                        {
+                            "title": "Show YMYL Box on this post",
+                            "value": "1"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "preferences": {
+        "context": "side",
+        "priority": "default"
+    }
+}

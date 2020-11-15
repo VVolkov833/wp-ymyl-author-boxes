@@ -1,0 +1,23 @@
+/* LAYOUT GRIDS */
+.fcp-container {
+    display: flex;
+    align-items:stretch;
+    justify-content:space-between;
+}
+
+.fcp-container > * {
+    margin-bottom:25px;
+}
+
+.fcp-col-2 {
+    flex-basis:47.5%;
+}
+
+@media (max-width:600px) {
+    .fcp-container {
+        flex-wrap:wrap;
+    }
+    .fcp-container > * {
+        flex-basis:100%;
+    }
+}

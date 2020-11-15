@@ -1,0 +1,64 @@
+{
+    "title": "",
+    "name": "settings",
+    "description": "",
+    "structure": [
+        {
+            "name": "ymyl-box",
+            "title": "YMYL box",
+            "description": "This box contains the resume, which normally printed bofere the content to ensure the visitors, that the page follows the YMYL principles, and responsible people are mentioned.",
+            "fields": [
+                {
+                    "type": "checkbox",
+                    "name": "ymyl-position",
+                    "title": "YMYL Box Position",
+                    "options": [
+                        {
+                            "title": "Before the content",
+                            "description": "Automatically print the box before the content (if any author is picked for the page)",
+                            "value": "1"
+                        }
+                    ]
+                },
+                {
+                    "type": "notice",
+                    "name": "",
+                    "title": "Other printing options",
+                    "text": "The YMYL can be printed in any other place: <ul><li>via shortcode: <code>[fcp-ymyl-box]</code></li><li>via PHP code: <code>&lt;?php if(function_exists('fcp_ymyl_boxe')){fcp_ymyl_boxe();} ?&gt;</code></li></ul>",
+                    "description": "The box can be printed only once. Second possible box will be removed."
+                },
+                {
+                    "type": "textarea",
+                    "name": "ymyl-content",
+                    "title": "YMYL box content",
+                    "description": "Something like: \"<strong>Further content was created or checked and verified by %name.</strong>\". Use <code>%name</code> sign to mark the place for printing the authors names."
+                }
+            ]
+        },
+        {
+            "name": "author-boxes",
+            "title": "Author boxes",
+            "fields": [
+                {
+                    "type": "checkbox",
+                    "name": "authorbox-position",
+                    "title": "Author Boxes Position",
+                    "options": [
+                        {
+                            "title": "After the content",
+                            "description": "Automatically print the boxes after the content (if an author is picked for the page)",
+                            "value": "1"
+                        }
+                    ]
+                },
+                {
+                    "type": "notice",
+                    "name": "",
+                    "title": "Other printing options",
+                    "text": "The author boxes can be printed in any other place: <ul><li>via shortcode: <code>[fcp-author-boxes]</code></li><li>via PHP code: <code>&lt;?php if(function_exists('fcp_author_boxes')){fcp_author_boxes();} ?&gt;</code></li></ul>",
+                    "description": "The box (or the boxes set in case of few authors) will be printed only once."
+                }
+            ]
+        }
+    ]
+}

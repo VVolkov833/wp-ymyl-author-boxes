@@ -1,0 +1,23 @@
+{
+    "title": "Author Settings",
+    "name": "author-settings",
+    "description": "",
+    "structure": [
+        {
+            "name": "",
+            "title": "",
+            "fields": [
+                {
+                    "type": "text",
+                    "name": "author-link",
+                    "title": "Link to the author's page",
+                    "description": "This page is important, according to Schema"
+                }
+            ]
+        }
+    ],
+    "preferences": {
+        "context": "normal",
+        "priority": "high"
+    }
+}
