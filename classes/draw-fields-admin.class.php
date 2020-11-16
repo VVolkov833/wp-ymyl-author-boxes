@@ -159,10 +159,21 @@ class FCPAdminFields {
     }
 
     public function printFields($structure, $values) {
-        foreach ( $structure as $b ) : 
+        
+        $classes = [];
+        if ( $this->st->preferences && $this->st->preferences->context ) {
+            $classes[] = 'fcp-meta';
+            if ( $this->st->preferences->context == 'side' ) {
+                $classes[] = 'fcp-meta-side';
+            }
+        } else {
+            $classes[] = 'fcp-page';
+        }
+    
+        foreach ( $structure as $b ) :
         ?>
 
-        <div id="<?php echo $b->name ?>">
+        <div id="<?php echo $this->s->prefix . $b->name ?>" class="<?php echo implode(' ', $classes) ?>">
             <h2><?php echo $b->title ?></h2>
             <p><?php echo $b->description ?></p>
 
@@ -171,10 +182,11 @@ class FCPAdminFields {
 
             <?php
                 foreach ( $b->fields as $c ) {
+
                     $methodName = 'printField_'.$c->type;
                     if ( method_exists( $this, $methodName ) ) {
                         $c->name = $this->s->prefix . $c->name;
-                        $c->savedValue = $values[ $c->name ][0];
+                        $c->savedValue = $values[ $c->name ];
                         $c->showMeWhen = $c->showMeWhen
                             ? "data-show-when='" . json_encode( $c->showMeWhen ) . "'"
                             : '';
@@ -197,21 +209,29 @@ class FCPAdminFields {
 	public function printMetaBoxes() {
 		global $post;
 
-		wp_nonce_field( $this->st->name.'_nonce', 'meta_box_nonce' );
-		
-        $this->printFields( $this->st->structure, get_post_meta( $post->ID ) );
+        foreach ( $this->st->structure as $b ) {
+            foreach ( $b->fields as $c ) {
+                $name = $this->s->prefix . $c->name;
+                $values[$name] = get_post_meta( $post->ID, $name, true );
+            }
+        }
 
+        wp_nonce_field( $this->st->name.'_nonce', 'meta_box_nonce' );
+        
+        $this->printFields( $this->st->structure, $values );
 	}
 	
     public function printSettings() {
-        $a = $this->st;
 
-        foreach ( $a->structure as $b ) {
+        foreach ( $this->st->structure as $b ) {
             foreach ( $b->fields as $c ) {
                 $name = $this->s->prefix . $c->name;
-                $values[$name][0] = get_option( $name );
+                $values[$name] = get_option( $name );
             }
         }
+
+        $a = $this->st;
+
     ?>
 
         <h1><?php echo $a->title ? $a->title : get_admin_page_title() ?></h1>
