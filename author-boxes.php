@@ -40,22 +40,13 @@ class FCPAuthorBoxes {
         $this->s = $s;
         $this->d = $d;
 
-        // styles & scripts
-		add_action( 'wp_footer', [ $this, 'styles_scripts_add' ] );
-
-		// add shortcodes for boxes
-//		add_shortcode( 'fcp-ymyl', [ $this, 'box_ymyl' ] );
-//		add_shortcode( 'fcp-author', [ $this, 'box_author' ] );
-
-		// print verified box before the content
-//		add_filter( 'the_content', array( $this, 'verified_before_content' ) );
-//		add_filter( 'the_content', array( $this, 'author_after_content' ) );
 
 		// ADMIN
 
         include_once( $this->s->self_path . 'classes/draw-fields-admin.class.php' );
         include_once( $this->s->self_path . 'classes/add-meta-box.class.php' );
 		
+		// add post type with the author boxes content
 		include_once( $this->s->self_path . 'classes/add-post-type.class.php' );
 		new FCPAddPostType(
             $this->s,
@@ -83,6 +74,7 @@ class FCPAuthorBoxes {
             ]
         );
 
+        // add the settings page and YMYL content
 		include_once( $this->s->self_path . 'classes/add-settings-page.class.php' );
 		new FCPSettingsPage(
             $this->s,
@@ -99,37 +91,82 @@ class FCPAuthorBoxes {
             ]
         );
 		
+		// add meta box to pages and posts to turn on/off the boxes
 		$posts_meta = FCPAdminFields::fileOrStructure( [
                 'file' => $this->s->self_path . 'structure/meta-posts.json'
         ]);
-        $posts_meta = $this->addAuthorsCheckboxes( $posts_meta );
+        $posts_meta = $this->addPageAuthorsCheckboxes( $posts_meta );
         $posts_meta->post_types = [ 'post', 'page' ];
 
 		new FCPAddMetaBox(
             $this->s,
             $posts_meta
 		);
-/*		
-		include_once( $this->settings()["self_path"] . 'dashboard/bulk.php' );
-		new FCP_Author_Boxes_Bulk();
-//*/		
-//		add_action( 'add_meta_boxes', array( $this, 'add_ymyl_meta_boxes' ) );
-//		add_action( 'save_post', array( $this, 'save_ymyl_meta_boxes' ) );
+		
+        // bulk operations page
+        // ++ separate save function to store post meta, not options
+/*
+        $bulk_options = $this->addBulkCheckboxes( [ 'post', 'page' ] );
 
-		// add class with menu settings
+        $authors_tabs = $this->selectAuthors();
+        $authors_tabs[0] = 'YMYL Box';
+
+        // ++ here goes the picked values
+        
+		new FCPSettingsPage(
+            $this->s,
+            [
+                'parent_slug' => 'edit.php?post_type=fcp-author',
+                'page_title' => 'Bulk',
+                'menu_title' => 'Bulk',
+                'capability' => 'edit_pages',
+                'menu_slug' => 'fcp-author-bulk',
+                'position' => 20
+            ],
+            [
+                'structure' => (object) [
+                    "title" => "",
+                    "name" => "bulk",
+                    "description" => "Bulk operations for YMYL and Author boxes",
+                    "tabs" => $authors_tabs,
+                    "structure" => [
+                        (object) [
+                            "name" => "ymyl-box",
+                            "title" => "",
+                            "fields" => $bulk_options
+                        ]
+                    ]
+                ]
+            ]
+        );
+//*/
+
 		// ++ can check all the sizes first, and pick squares if exist
 //        add_image_size( 'fcp-author', 512, 512, [ 'center', 'center' ] );
-        /*
-        if ( has_post_thumbnail() ) {
-            the_post_thumbnail( 'category-thumb' ); // category-thumb - название размера
+
+        add_action( 'admin_enqueue_scripts', [ $this, 'styleAdmin' ] );
+        
+        // USER
+
+		add_action( 'wp_footer', [ $this, 'addStylesScripts' ] );
+
+		// print before or after the content
+		if ( get_option( $this->s->prefix . 'ymyl-position' ) ) {
+            add_filter( 'the_content', [ $this, 'contentPrintYMYL' ] );
         }
-        */
-//        add_action( 'admin_enqueue_scripts', [ $this, 'styleDashboard' ] );
+        if ( get_option( $this->s->prefix . 'authorbox-position' ) ) {
+            add_filter( 'the_content', [ $this, 'contentPrintAuthor' ] );
+        }
+
+        // add shortcodes for boxes
+//		add_shortcode( 'fcp-ymyl', [ $this, 'box_ymyl' ] );
+//		add_shortcode( 'fcp-author', [ $this, 'box_author' ] );
+
 
 	}
 ////////////////////////////////////////////////////////////
 
-    private function addAuthorsCheckboxes($meta) {
+    private function selectAuthors() {
         $listAuthors = new WP_Query( [
             'post_type'             => 'fcp-author',
             'post_status'           => 'publish',
@@ -138,14 +175,60 @@ class FCPAuthorBoxes {
             'nopaging'              => true
         ]);
         if ( !$listAuthors->have_posts() ) {
+            return;
+        }
+
+        $result = [];
+        foreach( $listAuthors->posts as $v ) {
+            $result[$v->ID] = $v->post_title;
+        }
+
+        return $result;
+    }
+
+    private function addBulkCheckboxes($types) {
+        $result = [];
+        foreach( $types as $type ) {
+            $allPosts = new WP_Query( [
+                'post_type'             => $type,
+                'post_status'           => 'publish',
+                'orderby'               => 'title',
+                'order'                 => 'ASC',
+                'nopaging'              => true
+            ]);
+            if ( !$allPosts->have_posts() ) {
+                continue;
+            }
+
+            $fields = [];
+            foreach( $allPosts->posts as $v ) {
+                $fields[] = (object) [
+                    "title" => $v->post_title,
+                    "value" => $v->ID
+                ];
+            }
+            $result[] = (object) [
+                "type" => "checkbox",
+                "name" => "post-id",
+                "title" => get_post_type_object( $type )->labels->name,
+                "options" => $fields
+            ];
+        }
+
+        return $result;
+    }
+
+    private function addPageAuthorsCheckboxes($meta) {
+        $listAuthors = $this->selectAuthors();
+        if ( !$listAuthors ) {
             return $meta;
         }
 
         $fields = [];
-        foreach( $listAuthors->posts as $v ) {
+        foreach( $listAuthors as $k => $v ) {
             $fields[] = (object) [
-                "title" => $v->post_title,
-                "value" => $v->ID
+                "title" => $v,
+                "value" => $k
             ];
         }
         $meta->structure[0]->fields[] = (object) [
@@ -158,18 +241,19 @@ class FCPAuthorBoxes {
         return $meta;
     }
 
-	public function styleDashboard($hook) {
-
-        if ( !in_array( $hook, array( 'post.php', 'post-new.php', 'fcp-author_page_fcp-author-boxes' ) ) )
+	public function styleAdmin($hook) {
+        if ( !in_array( $hook, [ 'post.php', 'post-new.php', 'fcp-author_page_fcp-author-boxes', 'fcp-author_page_fcp-author-bulk' ] ) ) {
             return;
+        }
 
         wp_enqueue_style(
             'fcp-authors-admin',
             plugins_url( 'admin.css', __FILE__ ),
             false,
-            $hook//$this->settings()["css_ver_adm"]
+            $this->s->css_ver_adm
         );
 	}
+
 
 	// layout with schema
 	private function format_verified_box($author) {
@@ -319,7 +403,7 @@ class FCPAuthorBoxes {
 		return $result;
 	}
 	
-	public function styles_scripts_add() {
+	public function addStylesScripts() {
 
 		wp_enqueue_style( 'fcp_ab_style', plugins_url( 'style.css', __FILE__ ), false, $this->s->css_ver );
 		wp_enqueue_script( 'fcp_ab_scripts', plugins_url( 'base.js', __FILE__ ), [ 'jquery' ], $this->s->js_ver, 1 );
@@ -361,12 +445,15 @@ class FCPAuthorBoxes {
 		return $result;
 	}
 
-	// if content hooks are active
-	public function verified_before_content( $content ) {
-		return vvab_ymyl_verified_print(true).$content;
+	public function contentPrintYMYL( $content ) {
+        if ( in_the_loop() ) {
+            return 'before ' . $content;
+        }
 	}
-	public function author_after_content( $content ) {
-		return $content.vvab_ymyl_author_print(true);
+	public function contentPrintAuthor( $content ) {
+        if ( in_the_loop() ) {
+            return $content . ' after';
+        }
 	}
 
 

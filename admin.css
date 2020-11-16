@@ -1,23 +1,20 @@
 /* LAYOUT GRIDS */
-.fcp-container {
-    display: flex;
-    align-items:stretch;
-    justify-content:space-between;
+.fcp-meta-side * {
+    font-size:13px;
+}
+.fcp-meta-side td,
+.fcp-meta-side th {
+    display:block;
+    width:100%;
+    padding:0 0 15px;
 }
 
-.fcp-container > * {
-    margin-bottom:25px;
+.fcp-meta-side .fcp-limit-height {
+    max-height: 14em;
+    overflow:auto;
+    padding-left:2px;
 }
 
-.fcp-col-2 {
-    flex-basis:47.5%;
-}
-
-@media (max-width:600px) {
-    .fcp-container {
-        flex-wrap:wrap;
-    }
-    .fcp-container > * {
-        flex-basis:100%;
-    }
+.fcp-active {
+    font-weight:bold;
 }

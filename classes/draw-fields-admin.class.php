@@ -105,6 +105,7 @@ class FCPAdminFields {
             <td>
                 <fieldset
                     <?php echo $a->preview ?>
+                    class="fcp-limit-height"
                 >
                     <legend class="screen-reader-text"><span><?php echo $a->title ?></span></legend>
                     <?php
@@ -174,8 +175,8 @@ class FCPAdminFields {
         ?>
 
         <div id="<?php echo $this->s->prefix . $b->name ?>" class="<?php echo implode(' ', $classes) ?>">
-            <h2><?php echo $b->title ?></h2>
-            <p><?php echo $b->description ?></p>
+            <?php echo $b->title ? '<h2>'.$b->title.'</h2>' : '' ?>
+            <?php echo $b->description ? '<p>'.$b->description.'</p>' : '' ?>
 
             <table class="form-table">
             <tbody>
@@ -212,7 +213,7 @@ class FCPAdminFields {
         foreach ( $this->st->structure as $b ) {
             foreach ( $b->fields as $c ) {
                 $name = $this->s->prefix . $c->name;
-                $values[$name] = get_post_meta( $post->ID, $name, true );
+                $values[$name] = $c->savedValue ? $c->savedValue : get_post_meta( $post->ID, $name, true );
             }
         }
 
@@ -226,7 +227,7 @@ class FCPAdminFields {
         foreach ( $this->st->structure as $b ) {
             foreach ( $b->fields as $c ) {
                 $name = $this->s->prefix . $c->name;
-                $values[$name] = get_option( $name );
+                $values[$name] = $c->savedValue ? $c->savedValue : get_option( $name );
             }
         }
 
@@ -240,7 +241,9 @@ class FCPAdminFields {
         <form method="post" action="options.php">
             <?php
                 settings_fields( $this->s->prefix . $a->name . '_nonce' );
-                
+
+                $this->printTabs( $this->st->tabs );
+
                 $this->printFields( $a->structure, $values );
 
                 submit_button();
@@ -251,6 +254,36 @@ class FCPAdminFields {
 
     }
 
+    private function printTabs($tabs) { // a tabs version with no content changes
+        if ( !is_array( $tabs ) ) {
+            return;
+        }
+        
+        $url = get_permalink();
+        $tab = $_GET['fcp-author'] ? $_GET['fcp-author'] : 0;
+        
+        if ( !is_numeric( $tab ) || !$tabs[$tab] ) {
+            exit;
+        }
+        
+        $result = [];
+        foreach( $tabs as $k => $v ) {
+            $link = add_query_arg( ['fcp-author' => $k], $url );
+            $result[] = '<a href="'.$link.'" class="'.($tab == $k ? 'fcp-active' : '').'">'.$v.'</a>';
+            if ( $tab == $k ) {
+                $author = $v;
+            }
+        }
+
+        if ( count( $tabs ) > 1 ) {
+            echo implode( ' | ', $result );
+        }
+
+        echo '<input type="hidden" name="fcp-author" value="'.$tab.'">';
+        
+        echo '<h2>Adding <u>'.$author.'</u> to the posts below</h2>';
+    }
+    
     public static function fileOrStructure($a = []) {
     
         if ( $a['structure'] ) {

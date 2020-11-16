@@ -17,10 +17,6 @@
                             "title": "Before the content",
                             "description": "Automatically print the box before the content (if any author is picked for the page)",
                             "value": "1"
-                        },
-                        {
-                            "title": "Ahaha",
-                            "value": "2"
                         }
                     ]
                 },
