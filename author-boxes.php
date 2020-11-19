@@ -155,32 +155,51 @@ class FCPAuthorBoxes {
             add_filter( 'the_content', [ $this, 'contentPrintYMYL' ] );
         }
         if ( get_option( $this->s->prefix . 'authorbox-position' ) ) {
-            add_filter( 'the_content', [ $this, 'contentPrintAuthor' ] );
+            add_filter( 'the_content', [ $this, 'contentPrintAuthors' ] );
         }
 
         // add shortcodes for boxes
-//		add_shortcode( 'fcp-ymyl', [ $this, 'box_ymyl' ] );
-//		add_shortcode( 'fcp-author', [ $this, 'box_author' ] );
+		add_shortcode( 'fcp-ymyl-box', [ $this, 'shortcodeYMYL' ] );
+		add_shortcode( 'fcp-author-boxes', [ $this, 'shortcodeAuthors' ] );
 
 
 	}
 ////////////////////////////////////////////////////////////
 
-    private function selectAuthors() {
-        $listAuthors = new WP_Query( [
+    public function shortcodeYMYL() {
+        return getContentYMYL();
+    }
+    
+    public function shortcodeAuthors() {
+        return getContentAuthors();
+    }
+
+    private function selectAuthors($post__in = []) {
+        $query = [
             'post_type'             => 'fcp-author',
             'post_status'           => 'publish',
             'orderby'               => 'title',
             'order'                 => 'ASC',
             'nopaging'              => true
-        ]);
+        ];
+        
+        if ( $post__in[0] ) {
+            $query['post__in'] = $post__in;
+        }
+    
+        $listAuthors = new WP_Query( $query );
+        
         if ( !$listAuthors->have_posts() ) {
             return;
         }
 
         $result = [];
         foreach( $listAuthors->posts as $v ) {
-            $result[$v->ID] = $v->post_title;
+            $result[$v->ID] = (object) [
+                'title' => $v->post_title,
+                'slug' => $v->post_name,
+                'content' => $v->post_content
+            ];
         }
 
         return $result;
@@ -227,7 +246,7 @@ class FCPAuthorBoxes {
         $fields = [];
         foreach( $listAuthors as $k => $v ) {
             $fields[] = (object) [
-                "title" => $v,
+                "title" => $v->title,
                 "value" => $k
             ];
         }
@@ -254,154 +273,6 @@ class FCPAuthorBoxes {
         );
 	}
 
-
-	// layout with schema
-	private function format_verified_box($author) {
-		static $common_printed = false;
-
-		$this->plugin_setup();
-
-		$format_text = true;
-		if ( !$author['verified-text'] && $common_printed === false ) {
-			$common_printed = true;
-			$author['verified-text'] = $this->verified_common_modify();
-			$format_text = false;
-		}
-
-		if ( $author['verified-text'] ) {
-			return '
-<div class="vv-author-verified vv-closed-default">
-	<div class="vv-verified-content">
-		'.( $format_text ? $this->common_format_content_verified($author) : $author['verified-text'] ).'
-	</div>
-</div>
-	';
-		}
-
-	}
-
-	private function format_author_box($author) {
-		if ( !$author['about-text'] )
-			return '';
-
-		return '
-<div class="vv-author" id="'.$author['slug'].'" itemscope itemid="'.$author['slug'].'" itemtype="https://schema.org/Person">
-	<div class="vv-author-content">
-		'.$this->common_format_img($author).'
-		<div class="vv-author-about">
-			<span class="vv-author-title"><span itemprop="name">'.$author['name'].'</span></span>
-			<div class="vv-author-description" itemprop="description">
-				'.$this->common_format_content_about($author).'
-			</div>
-		</div>
-	</div>
-</div>
-	';
-	}
-
-	private function common_format_img($author) {
-		if ( !$author['img'] )
-			return '';
-
-		$avatar = '
-		<span itemprop="image" itemscope itemtype="https://schema.org/ImageObject" class="vv-author-image">
-			<img src="'.( $author['thumb'] ? $author['thumb'] : $author['img'] ).'" alt="'.$author['name'].'">
-			<meta itemprop="url" content="'.$author['img'].'">
-			<meta itemprop="width" content="512">
-			<meta itemprop="height" content="512">
-		</span>
-		';
-		return $avatar;
-	}
-	
-	// modify common text with wp paragraphs and add links to first author mention
-	private function common_format_content_verified($author) {
-
-		$text = $author['verified-text'];
-
-		// check if author has author box, not only verified
-		$add_anchor = false;
-		$boxes = $this->selected_boxes()[ $author['slug'] ];
-		if ( $boxes == 'both' ) {
-			$add_anchor = true;
-		}
-
-		if ( $add_anchor ) {
-
-			$nowrap_name = str_replace(' ', '&nbsp;', $author['name']);
-			$text = $this->replace_first( $text,
-				$author['name'],
-				'<a href="#'.$author['slug'].'">'.$nowrap_name.'</a>'
-			);
-		}
-
-		return wpautop( $text );
-	}
-
-	private function common_format_content_about($author) {
-
-		$text = $author['about-text'];
-
-		if ( $author['link'] ) {
-
-			$nowrap_name = str_replace(' ', '&nbsp;', $author['name']);
-			$text = $this->replace_first( $text,
-				$author['name'],
-				'<a href="'.$author['link'].'" itemprop="url" rel="author">'.$nowrap_name.'</a>'
-			);
-		}
-
-		return wpautop( $text );
-	}
-	
-	private function verified_common_modify() {
-		static $result = '';
-
-		if ( $result !== '' )
-			return $result;
-
-		$this->plugin_setup();
-		
-		$boxes = $this->selected_boxes();
-
-		// add list of authors to common verified box
-		$united_authors = [];
-		$linked_authors = [];
-		foreach ( $this->authors as $v ) {
-			if ( !$v['verified-text'] && ( $boxes[$v['slug']] == 'verified' || $boxes[$v['slug']] == 'both' ) ) {
-				$nowrap_name = str_replace(' ', '&nbsp;', $v['name']);
-
-				$united_authors[] = $nowrap_name;
-
-				// add anchors if author box present
-				if ( $boxes[$v['slug']] == 'both' ) {
-					$linked_authors[] = '<a href="#'.$v['slug'].'">'.$nowrap_name.'</a>';
-				} else {
-					$linked_authors[] = $nowrap_name;
-				}
-			}
-		}
-		$united_authors = $this->list_with_und($united_authors);
-		$linked_authors = $this->list_with_und($linked_authors);
-
-		$result = wpautop( sprintf( $this->verified_common_text, $united_authors, $linked_authors ) );
-		return $result;
-	}
-	
-	private function selected_boxes() {
-		global $post;
-		static $result = null;
-		
-		if ( $result === null ) {
-			$result = [];
-			$values = get_post_custom( $post->ID );
-			if ( isset( $values['fcp_ymyl_author'] ) ) {
-				$result = unserialize( $values['fcp_ymyl_author'][0] );
-			}
-		}
-
-		return $result;
-	}
 	
 	public function addStylesScripts() {
 
@@ -410,155 +281,147 @@ class FCPAuthorBoxes {
 
 	}
 
-	// make the shortcodes
-	private function get_boxes() {
+	private function currentAuthors() {
+        static $authors = false;
 
-	}
-	public function box_ymyl() {
-		return 'ahaha';
-	}
-	public function box_author() {
-		return 'ohoho';
-	}
-	private function deliver_the_box($box) {
-
-		$values = $this->selected_boxes();
-
-		$result = '';
-		$count_results = 0;
-
-		foreach ( $this->authors as $author ) {
-			if ( isset($values[$author['slug']]) && ( $values[$author['slug']] == $box || $values[$author['slug']] == 'both' ) ) {
-				$result .= call_user_func( array($this, 'format_'.$box.'_box'), $author );
-				$count_results++;
-			}
-		}
-		
-		// additions
-		if ($box == 'verified') {
-			$result = '<div class="vv-verifieds-wrap">'.$result.'</div>';
-		}
-		if ($box == 'author') {
-			$result = '<div class="vv-authors-wrap '.($count_results > 1 ? 'vv-authors-x2' : '').'">'.$result.'</div>';
-		}
-		
-		return $result;
-	}
-
-	public function contentPrintYMYL( $content ) {
-        if ( in_the_loop() ) {
-            return 'before ' . $content;
+        if ( $authors !== false ) {
+            return $authors;
         }
-	}
-	public function contentPrintAuthor( $content ) {
-        if ( in_the_loop() ) {
-            return $content . ' after';
-        }
-	}
 
-
-
-	// admin meta boxes
-	public function add_ymyl_meta_boxes() {
-		$this->plugin_setup();
-		
-		add_meta_box( 'ymyl_boxes', 'YMYL Authors Boxes', array($this, 'draw_ymyl_meta_boxes'), $this->post_type, 'side', 'default' );
-	}
-
-	public function draw_ymyl_meta_boxes() {
-		$this->plugin_setup();
-		
-		$values = $this->selected_boxes();
-
-		// used to save verify
-		wp_nonce_field( 'vvab_ymyl_meta_box_nonce', 'meta_box_nonce' );
-
-		// main printing
-		foreach ($this->authors as $author) {
-
-			// author options
-			$options = '<option value="0">Show NO boxes</option>';
-			foreach ($this->author_options as $option => $text) {
-				$options .= '<option value="'.$option.'"'.(isset($values[$author['slug']])&&$values[$author['slug']]==$option?' selected':'').'>'.$text.'</option>';
-			}
-
-			echo '
-		<p>
-			<strong>'.$author['name'].'</strong>
-			<br>
-			<select name="vvab_ymyl_boxes['.$author['slug'].']">
-				'.$options.'
-			</select>
-		</p>			
-			';
-		}
-		
-	}
-
-	public function save_ymyl_meta_boxes($post_id){
-		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) return;
-		if ( !isset( $_POST['meta_box_nonce'] ) || !wp_verify_nonce( $_POST['meta_box_nonce'], 'vvab_ymyl_meta_box_nonce' ) ) return;
-		if ( !current_user_can( 'edit_post', $post_id ) ) return;
-
-		update_post_meta( $post_id, 'vvab_ymyl_boxes', $_POST['vvab_ymyl_boxes'] );
-
-	}
-
-
-	// helping functions
-	private function replace_first($haystack, $needle, $replace) {
-		if ( !$haystack || !$needle || !$replace )
-			return $haystack;
-
-		$pos = strpos( $haystack, $needle );
-		if ($pos === false)
-			return $haystack;
-
-		$newstring = substr_replace(
-			$haystack,
-			$replace,
-			$pos,
-			strlen($needle)
-		);
-		return $newstring;
+        $ids = get_post_meta( get_the_ID(), $this->s->prefix . 'show-authors', true );
+        
+        $authors = $this->selectAuthors( $ids );
+        
+        if ( !$authors || !count( array_filter($authors) ) )
+            return;
+        
+        return $authors;
 	}
 	
-	private function list_with_und($arr) {
-		$last = '';
+	public function getContentAuthors() {
+	
+        $authors = $this->currentAuthors();
+        
+        foreach ( $authors as $k => &$v ) {
+            if ( !$img = get_post_thumbnail_id( $k ) ) {
+                continue;
+            }
 
-		if ( $arr[1] )
-			$last = array_pop($arr);
+            $img = wp_get_attachment_image_src( $img, 'full' );
 
-		return implode( ', ', $arr ) . ( $last ? ' und '.$last : '' );
+            ob_start();
+
+            ?>
+            <span itemprop="image" itemscope itemtype="https://schema.org/ImageObject" class="fcp-author-image">
+                <img src="<?php echo $img[0] ?>" alt="<?php echo $v->title ?>">
+                <meta itemprop="url" content="<?php echo $img[0] ?>">
+                <meta itemprop="width" content="<?php echo $img[1] ?>">
+                <meta itemprop="height" content="<?php echo $img[2] ?>">
+            </span>
+            <?php
+
+            $v->img = ob_get_contents();
+            ob_end_clean();
+            
+        }
+        unset( $v );
+        
+        $total = count( $authors );
+        foreach ( $authors as $v ) {
+
+            ob_start();
+
+            ?>
+            <div class="fcp-authors-wrap<?php echo ( $total > 1 ? 'fcp-authors-x2' : '' ) ?>">
+                <div class="fcp-author" id="<?php echo $v->slug ?>" itemscope itemid="<?php echo $v->slug ?>" itemtype="https://schema.org/Person">
+                    <div class="fcp-author-content">
+                        <?php echo $v->img ?>
+                        <div class="fcp-author-about">
+                            <span class="fcp-author-title"><span itemprop="name"><?php echo $v->title ?></span></span>
+                            <div class="fcp-author-description" itemprop="description">
+                                <?php echo $v->content ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php
+
+            $content .= ob_get_contents();
+            ob_end_clean();
+
+        }
+        return $content;
+
+	}
+	
+	public function getContentYMYL() {
+	
+        $content = get_option( $this->s->prefix . 'ymyl-content' );
+        $authors = $this->currentAuthors();
+        
+		$linked_authors = [];
+		foreach ( $authors as $v ) {
+            $linked_authors[] = '<a href="#'.$v->slug.'">'.str_replace( ' ', '&nbsp;', $v->title ).'</a>';
+		}
+
+		$linked_authors = $this->listWithAnd($linked_authors);
+		
+		$content = wpautop( str_replace( '%name', $linked_authors, $content ) );
+
+		ob_start();
+
+        ?>
+        <div class="fcp-ymyl-wrap">
+            <div class="fcp-ymyl fcp-closed-default">
+                <div class="fcp-ymyl-content">
+                    <?php echo $content ?>
+                </div>
+            </div>
+        </div>
+        <?php
+        
+        $content = ob_get_contents();
+        ob_end_clean();
+
+        return $content;
+	}
+	
+	public function contentPrintYMYL( $content ) {
+        if ( !in_the_loop() ) {
+            return $content;
+        }
+        
+        return $this->getContentYMYL() . $content;
+	}
+
+	public function contentPrintAuthors( $content ) {
+        if ( !in_the_loop() ) {
+            return $content;
+        }
+        
+        return $content . $this->getContentAuthors();
+	}
+
+
+	private function listWithAnd($arr) {
+
+		if ( $arr[1] ) {
+			$last = array_pop( $arr );
+        }
+
+		return implode( ', ', $arr ) . ( $last ? ' '.__( 'and', $this->s->text_domain ).' '.$last : '' );
 	}
 	
 }
 
 new FCPAuthorBoxes();
 
-// print author boxes anywhere in php files
-function vvab_ymyl_verified_print($return_only = false) {
-	return vvab_ymyl_print('verified', $return_only);
-}
-function vvab_ymyl_author_print($return_only = false) {
-	return vvab_ymyl_print('author', $return_only);
+
+function fcp_ymyl_box() {
+    echo do_shortcode( '[fcp-ymyl-box]' );
 }
 
-function vvab_ymyl_print($box, $return_only) {
-
-	$authors = false;
-	if ( !$authors = get_post_meta( get_the_ID(), 'vvab_ymyl_boxes', true ) )
-		return '';
-	if ( count( array_filter($authors) ) == 0 )
-		return '';
-	if ( is_archive() || ( !is_front_page() && is_home() ) )
-		return '';
-
-	if ( $return_only )
-		return do_shortcode('[ymyl-'.$box.']');
-
-	echo do_shortcode('[ymyl-'.$box.']');
-
+function fcp_author_boxes() {
+    echo do_shortcode( '[fcp-author-boxes]' );
 }
-
-?>
