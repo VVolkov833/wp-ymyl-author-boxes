@@ -18,15 +18,9 @@ class FCPAuthorBoxes {
 
     private $s, $d;
 
-	private function settings() { // delete me
-
-	}
-
-////////////////////////////////////////////////////////////
-
 	public function __construct() {
 
-		$d = true; // developers mode
+		$d = false; // developers mode
 
 		$s->dev_mode = $d;
 		$s->prefix = 'fcpab_';
@@ -148,7 +142,7 @@ class FCPAuthorBoxes {
         
         // USER
 
-		add_action( 'wp_footer', [ $this, 'addStylesScripts' ] );
+		add_action( 'wp_enqueue_scripts', [ $this, 'addStylesScripts' ], 20 );
 
 		// print before or after the content
 		if ( get_option( $this->s->prefix . 'ymyl-position' ) ) {
@@ -276,8 +270,8 @@ class FCPAuthorBoxes {
 	
 	public function addStylesScripts() {
 
-		wp_enqueue_style( 'fcp_ab_style', plugins_url( 'style.css', __FILE__ ), false, $this->s->css_ver );
-		wp_enqueue_script( 'fcp_ab_scripts', plugins_url( 'base.js', __FILE__ ), [ 'jquery' ], $this->s->js_ver, 1 );
+		wp_enqueue_style( 'fcp-ymyl-authors', plugins_url( 'style.css', __FILE__ ), false, $this->s->css_ver );
+		//wp_enqueue_script( 'fcp-ymyl-authors', plugins_url( 'base.js', __FILE__ ), [ 'jquery' ], $this->s->js_ver );
 
 	}
 
@@ -300,8 +294,10 @@ class FCPAuthorBoxes {
 	
 	public function getContentAuthors() {
 	
-        $authors = $this->currentAuthors();
-        
+        if ( !$authors = $this->currentAuthors() ) {
+            return;
+        }
+
         foreach ( $authors as $k => &$v ) {
             if ( !$img = get_post_thumbnail_id( $k ) ) {
                 continue;
@@ -312,12 +308,15 @@ class FCPAuthorBoxes {
             ob_start();
 
             ?>
-            <span itemprop="image" itemscope itemtype="https://schema.org/ImageObject" class="fcp-author-image">
+            <div itemprop="image" itemscope itemtype="https://schema.org/ImageObject"
+                class="fcp-author-image"
+                style="background-image:url('<?php echo $img[0] ?>');"
+            >
                 <img src="<?php echo $img[0] ?>" alt="<?php echo $v->title ?>">
                 <meta itemprop="url" content="<?php echo $img[0] ?>">
                 <meta itemprop="width" content="<?php echo $img[1] ?>">
                 <meta itemprop="height" content="<?php echo $img[2] ?>">
-            </span>
+            </div>
             <?php
 
             $v->img = ob_get_contents();
@@ -332,15 +331,13 @@ class FCPAuthorBoxes {
             ob_start();
 
             ?>
-            <div class="fcp-authors-wrap<?php echo ( $total > 1 ? 'fcp-authors-x2' : '' ) ?>">
-                <div class="fcp-author" id="<?php echo $v->slug ?>" itemscope itemid="<?php echo $v->slug ?>" itemtype="https://schema.org/Person">
-                    <div class="fcp-author-content">
-                        <?php echo $v->img ?>
-                        <div class="fcp-author-about">
-                            <span class="fcp-author-title"><span itemprop="name"><?php echo $v->title ?></span></span>
-                            <div class="fcp-author-description" itemprop="description">
-                                <?php echo $v->content ?>
-                            </div>
+            <div class="fcp-author" id="<?php echo $v->slug ?>" itemscope itemid="<?php echo $v->slug ?>" itemtype="https://schema.org/Person">
+                <div class="fcp-author-content">
+                    <?php echo $v->img ?>
+                    <div class="fcp-author-about">
+                        <p class="fcp-author-title" itemprop="name"><?php echo $v->title ?></p>
+                        <div class="fcp-author-description" itemprop="description">
+                            <?php echo $v->content ?>
                         </div>
                     </div>
                 </div>
@@ -351,11 +348,20 @@ class FCPAuthorBoxes {
             ob_end_clean();
 
         }
+        
+        $content = '<div class="fcp-authors-wrap'.( $total > 1 ? ' fcp-authors-x2' : '' ).'">'
+            .$content
+            .'</div>';
+                
         return $content;
 
 	}
 	
 	public function getContentYMYL() {
+	
+        if ( !get_post_meta( get_the_ID(), $this->s->prefix . 'ymyl-show', true ) ) {
+            return;
+        }
 	
         $content = get_option( $this->s->prefix . 'ymyl-content' );
         $authors = $this->currentAuthors();
