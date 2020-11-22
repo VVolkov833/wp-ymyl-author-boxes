@@ -18,7 +18,24 @@ class FCPAuthorBoxes {
 
     private $s, $d;
 
-	public function __construct() {
+    public function __construct() {
+
+        // as we are slightly dependent on other plugins (pll, yoast..)
+        add_action( 'init', [ $this, 'init' ], 0 ); // plugins_loaded couldn't load pll_current_language
+        
+		// polylang support
+		add_action( 'plugins_loaded', function() {
+            if ( function_exists( 'pll_current_language' ) ) {
+                add_filter( 'pll_get_post_types', function($post_types, $is_settings) {
+                    $post_types['fcp-author'] = 'fcp-author';
+                    return $post_types;
+                }, 10, 2 );
+            }
+        });
+
+	}
+    
+	public function init() {
 
 		$d = false; // developers mode
 
@@ -26,7 +43,7 @@ class FCPAuthorBoxes {
 		$s->prefix = 'fcpab_';
 		$s->text_domain = 'fcp-author-boxes';
 		$s->self_path = plugin_dir_path( __FILE__ );
-		$s->css_ver = $d ? time() : '1.4.8';
+		$s->css_ver = $d ? time() : '1.4.9';
 		$s->js_ver = $d ? time() : '1.1.0';
 		$s->css_ver_adm = $d ? time() : '1.4.8';
 		$s->js_ver_adm = $d ? time() : '1.1.0';
@@ -86,16 +103,18 @@ class FCPAuthorBoxes {
         );
 		
 		// add meta box to pages and posts to turn on/off the boxes
-		$posts_meta = FCPAdminFields::fileOrStructure( [
-                'file' => $this->s->self_path . 'structure/meta-posts.json'
-        ]);
-        $posts_meta = $this->addPageAuthorsCheckboxes( $posts_meta );
-        $posts_meta->post_types = [ 'post', 'page' ];
+//		if ( is_admin() ) {
+            $posts_meta = FCPAdminFields::fileOrStructure( [
+                    'file' => $this->s->self_path . 'structure/meta-posts.json'
+            ]);
+            $posts_meta = $this->addPageAuthorsCheckboxes( $posts_meta );
+            $posts_meta->post_types = [ 'post', 'page' ];
 
-		new FCPAddMetaBox(
-            $this->s,
-            $posts_meta
-		);
+            new FCPAddMetaBox(
+                $this->s,
+                $posts_meta
+            );
+//        }
 		
         // bulk operations page
         // ++ separate save function to store post meta, not options
@@ -156,7 +175,6 @@ class FCPAuthorBoxes {
 		add_shortcode( 'fcp-ymyl-box', [ $this, 'shortcodeYMYL' ] );
 		add_shortcode( 'fcp-author-boxes', [ $this, 'shortcodeAuthors' ] );
 
-
 	}
 ////////////////////////////////////////////////////////////
 
@@ -169,6 +187,7 @@ class FCPAuthorBoxes {
     }
 
     private function selectAuthors($post__in = []) {
+
         $query = [
             'post_type'             => 'fcp-author',
             'post_status'           => 'publish',
@@ -176,13 +195,17 @@ class FCPAuthorBoxes {
             'order'                 => 'ASC',
             'nopaging'              => true
         ];
-        
+
         if ( $post__in[0] ) {
             $query['post__in'] = $post__in;
         }
-    
-        $listAuthors = new WP_Query( $query );
         
+        if ( function_exists( 'pll_current_language' ) ) {
+            $query['lang'] = pll_current_language();
+        }
+
+        $listAuthors = new WP_Query( $query );
+
         if ( !$listAuthors->have_posts() ) {
             return;
         }
@@ -277,12 +300,14 @@ class FCPAuthorBoxes {
 
 	private function currentAuthors() {
         static $authors = false;
-
+        
         if ( $authors !== false ) {
             return $authors;
         }
 
-        $ids = get_post_meta( get_the_ID(), $this->s->prefix . 'show-authors', true );
+        if ( !$ids = get_post_meta( get_the_ID(), $this->s->prefix . 'show-authors', true ) ) {
+            return;
+        }
         
         $authors = $this->selectAuthors( $ids );
         
@@ -293,7 +318,7 @@ class FCPAuthorBoxes {
 	}
 	
 	public function getContentAuthors() {
-	
+
         if ( !$authors = $this->currentAuthors() ) {
             return;
         }
@@ -328,6 +353,8 @@ class FCPAuthorBoxes {
         $total = count( $authors );
         foreach ( $authors as $v ) {
 
+            $v->content = $this->relAuthor( $v->content );
+        
             ob_start();
 
             ?>
@@ -356,6 +383,25 @@ class FCPAuthorBoxes {
         return $content;
 
 	}
+	
+	private function relAuthor($c) {
+
+        $dom = new DOMDocument();
+        $dom->loadHTML( $c );
+
+        $elements = $dom->getElementsByTagName( 'a' );
+
+        if ( !$elements instanceof DOMNodeList ) {
+            return $c;
+        }
+        foreach( $elements as $domElement ) {
+            $rel = $domElement->getAttribute( 'rel' );
+            $domElement->setAttribute( 'rel', $rel.' author' );
+            break;
+        }
+        $c = $dom->saveHTML();
+        return $c;
+    }
 	
 	public function getContentYMYL() {
 	
