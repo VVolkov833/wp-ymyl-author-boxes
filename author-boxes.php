@@ -3,7 +3,7 @@
 /*
 Plugin Name: YMYL Author Boxes
 Description: Add YMYL and Author Boxes to your pages and posts
-Version: 1.3
+Version: 1.3.2
 Requires at least: 4.7
 Requires PHP: 5.2.4
 Author: Firmcatalyst, Vadim Volkov
@@ -39,6 +39,7 @@ class FCPAuthorBoxes {
 
 		$d = false; // developers mode
 
+		$s = (object) [];
 		$s->dev_mode = $d;
 		$s->prefix = 'fcpab_';
 		$s->text_domain = 'fcp-author-boxes';
@@ -79,10 +80,12 @@ class FCPAuthorBoxes {
                 'has_archive' => false,
                 'exclude_from_search' => true,
                 'publicly_queryable' => false
-            ],
+            ]
+/*            ,
             [
                 'file' => $this->s->self_path . 'structure/meta-authors.json'
             ]
+//*/
         );
 
         // add the settings page and YMYL content
@@ -196,7 +199,7 @@ class FCPAuthorBoxes {
             'nopaging'              => true
         ];
 
-        if ( $post__in[0] ) {
+        if ( isset( $post__in[0] ) ) {
             $query['post__in'] = $post__in;
         }
         

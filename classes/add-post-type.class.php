@@ -34,26 +34,27 @@ class FCPAddPostType {
 
     public function addPostType() {
 
+        $s = $this->s;
         $p = $this->p;
     
         $labels = [
-            'name'                => __( $p['plural'], $s['text_domain'] ),
-            'singular_name'       => __( $p['name'], $s['text_domain'] ),
-            'menu_name'           => __( $p['plural'], $s['text_domain'] ),
-            'all_items'           => __( 'All ' . $p['plural'], $s['text_domain'] ),
-            'view_item'           => __( 'View ' . $p['name'], $s['text_domain'] ),
-            'add_new_item'        => __( 'Add New ' . $p['name'], $s['text_domain'] ),
-            'add_new'             => __( 'Add New', $s['text_domain'] ),
-            'edit_item'           => __( 'Edit ' . $p['name'], $s['text_domain'] ),
-            'update_item'         => __( 'Update ' . $p['name'], $s['text_domain'] ),
-            'search_items'        => __( 'Search ' . $p['name'], $s['text_domain'] ),
-            'not_found'           => __( $p['name'] . ' Not Found', $s['text_domain'] ),
-            'not_found_in_trash'  => __( $p['name'] . ' Not found in Trash', $s['text_domain'] ),
+            'name'                => __( $p['plural'], $s->text_domain ),
+            'singular_name'       => __( $p['name'], $s->text_domain ),
+            'menu_name'           => __( $p['plural'], $s->text_domain ),
+            'all_items'           => __( 'All ' . $p['plural'], $s->text_domain ),
+            'view_item'           => __( 'View ' . $p['name'], $s->text_domain ),
+            'add_new_item'        => __( 'Add New ' . $p['name'], $s->text_domain ),
+            'add_new'             => __( 'Add New', $s->text_domain ),
+            'edit_item'           => __( 'Edit ' . $p['name'], $s->text_domain ),
+            'update_item'         => __( 'Update ' . $p['name'], $s->text_domain ),
+            'search_items'        => __( 'Search ' . $p['name'], $s->text_domain ),
+            'not_found'           => __( $p['name'] . ' Not Found', $s->text_domain ),
+            'not_found_in_trash'  => __( $p['name'] . ' Not found in Trash', $s->text_domain ),
         ];
             
         $args = [
-            'label'               => __( $p['slug'], $s['text_domain'] ),
-            'description'         => __( $p['description'], $s['text_domain'] ),
+            'label'               => __( $p['slug'], $s->text_domain ),
+            'description'         => __( $p['description'], $s->text_domain ),
             'labels'              => $labels,
             'supports'            => $p['fields'],
             'hierarchical'        => $p['hierarchical'],

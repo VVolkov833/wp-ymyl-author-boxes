@@ -8,22 +8,6 @@
             "title": "",
             "fields": [
                 {
-                    "type": "checkbox",
-                    "name": "authorbox-position",
-                    "title": "Author Boxes Position",
-                    "options": [
-                        {
-                            "title": "After the content",
-                            "description": "Automatically print the boxes after the content (if an author is picked for the page)",
-                            "value": "1"
-                        },
-                        {
-                            "title": "Ahaha",
-                            "value": "2"
-                        }
-                    ]
-                },
-                {
                     "type": "text",
                     "name": "author-link",
                     "title": "Link to the author's page",

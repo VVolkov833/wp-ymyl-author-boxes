@@ -286,10 +286,10 @@ class FCPAdminFields {
     
     public static function fileOrStructure($a = []) {
     
-        if ( $a['structure'] ) {
+        if ( isset( $a['structure'] ) ) {
             return $a['structure'];
 
-        } elseif ( $a['file'] ) {
+        } elseif ( isset( $a['file'] ) ) {
 
             if ( !is_file( $a['file'] ) ) {
                 return;
