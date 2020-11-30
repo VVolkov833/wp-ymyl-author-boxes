@@ -3,7 +3,7 @@
 /*
 Plugin Name: YMYL Author Boxes
 Description: Add YMYL and Author Boxes to your pages and posts
-Version: 1.3.2
+Version: 1.3.3
 Requires at least: 4.7
 Requires PHP: 5.2.4
 Author: Firmcatalyst, Vadim Volkov
@@ -182,11 +182,11 @@ class FCPAuthorBoxes {
 ////////////////////////////////////////////////////////////
 
     public function shortcodeYMYL() {
-        return getContentYMYL();
+        return $this->getContentYMYL();
     }
     
     public function shortcodeAuthors() {
-        return getContentAuthors();
+        return $this->getContentAuthors();
     }
 
     private function selectAuthors($post__in = []) {
@@ -354,6 +354,7 @@ class FCPAuthorBoxes {
         unset( $v );
         
         $total = count( $authors );
+        $content = '';
         foreach ( $authors as $v ) {
 
             $v->content = $this->relAuthor( $v->content );
@@ -390,7 +391,7 @@ class FCPAuthorBoxes {
 	private function relAuthor($c) {
 
         $dom = new DOMDocument();
-        $dom->loadHTML( $c );
+        $dom->loadHTML( mb_convert_encoding( $c, 'HTML-ENTITIES', 'UTF-8' ) );
 
         $elements = $dom->getElementsByTagName( 'a' );
 
@@ -461,7 +462,8 @@ class FCPAuthorBoxes {
 
 	private function listWithAnd($arr) {
 
-		if ( $arr[1] ) {
+        $last = '';
+		if ( isset( $arr[1] ) ) {
 			$last = array_pop( $arr );
         }
 
